@@ -1,0 +1,7 @@
+[package]
+name = "netcatrs"
+version = "0.1.0"
+authors = ["Frederik B <freddy@flashpad>"]
+
+[dependencies]
+#libc = "0.2"
