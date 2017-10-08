@@ -5,4 +5,3 @@ authors = ["Frederik B <freddy@flashpad>"]
 
 [dependencies]
 mio = "0.6.10"
-#libc = "0.2"
