@@ -4,9 +4,6 @@ use std::io::Write;
 use std::io::Read;
 use std::io::BufRead;
 use std::process;
-use std::str;
-//use std::sync::mpsc::{Sender, Receiver};
-//use std::sync::mpsc;
 use std::thread;
 
 extern crate mio;
@@ -23,15 +20,14 @@ fn main() {
         println!("Usage: {} <ip> <port>", args[0]);
     }
     let port: u32 = args[2].parse().expect("Invalid Port");
-    let ref host = args[1];
+    let host = &args[1];
 
+    let ending = "\x0A";
     ///////////////////////////////////////////////////////////////
 
     // Pick a token that will not be used by any other socket and
     // use that one for the listener.
     const SOCKREADER: Token = Token(0);
-    const SOCKWRITER: Token = Token(1);
-    const STDINREADER: Token = Token(2);
 
     // The `Poll` instance
     let poll = Poll::new().unwrap();
@@ -44,10 +40,8 @@ fn main() {
     // Register the listener
     poll.register(&stream,
                   SOCKREADER,
-                  Ready::readable(),
+                  Ready::readable(), // andere events wären toll, z.b. disconnect
                   PollOpt::edge()).unwrap();
-    //poll.register(&stream, SOCKWRITER, Writer::writable(), PollOpt::edge())?;
-
 
     // Event storage
     let mut events = Events::with_capacity(1024);
@@ -55,16 +49,15 @@ fn main() {
     // Read buffer, this will never actually get filled
     let mut buf = [0; 256];
 
-    let stdin_thread = thread::spawn(move || {
+    thread::spawn(move || {
         loop {
             let input = std::io::stdin();
             for line in input.lock().lines() {
-                let l = line.unwrap(); // this could be an invalid string.
+                let l = line.unwrap() + ending; // this could be an invalid string.
                 let bytes = l.as_bytes();
                 let byte_length = bytes.len();
-                let written = write_stream.write(bytes).unwrap();
+                let written = write_stream.write(bytes).unwrap(); // dont unwrap, could be broken pipe
                 assert_eq!(byte_length, written);
-                write_stream.write("\x0A".as_bytes()); // TODO allow -C switch to write 0A0D
             }
         }
     });
