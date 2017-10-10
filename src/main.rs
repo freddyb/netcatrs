@@ -10,9 +10,6 @@ extern crate mio;
 use mio::{Events, Ready, Poll, PollOpt, Token};
 use mio::net::TcpStream;
 
-//use std::collections::HashMap;
-
-
 fn main() {
     // arg parsing
     let args: Vec<_> = env::args().collect();
@@ -31,8 +28,6 @@ fn main() {
     // Pick a token that will not be used by any other socket and
     // use that one for the listener.
     const SOCKREADER: Token = Token(0);
-
-    // The `Poll` instance
     let poll = Poll::new().unwrap();
 
     let addr = match format!("{}:{}", host, port).parse() {
