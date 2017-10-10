@@ -82,11 +82,12 @@ fn main() {
                     loop {
                         match stream.read(&mut buf) {
                             Ok(read_len) => {
-                                println!("{:?}", String::from_utf8_lossy(&buf[0..read_len]));
+                                match io::stdout().write(&buf[0..read_len]) {
+                                    Ok(len) => { assert_eq!(len, read_len) },
+                                    Err(e) => { panic!("{:?}", e); }
+                                 }
                                 break;
                             }
-                            // Data is not actually sent in this example
-                            //Ok(_) => unreachable!(),
                             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
                                 // Socket is not ready anymore, stop reading
                                 break;
