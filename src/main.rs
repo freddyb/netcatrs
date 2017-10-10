@@ -18,10 +18,13 @@ fn main() {
     let args: Vec<_> = env::args().collect();
     if args.len() != 3 {
         println!("Usage: {} <ip> <port>", args[0]);
+        process::exit(1);
     }
-    let port: u32 = args[2].parse().expect("Invalid Port");
+    let port: u32 = match args[2].parse() {
+        Ok(p) => p,
+        Err(_) => { println!("invalid port number"); process::exit(1); }
+    };
     let host = &args[1];
-
     let ending = "\x0A";
     ///////////////////////////////////////////////////////////////
 
@@ -32,7 +35,11 @@ fn main() {
     // The `Poll` instance
     let poll = Poll::new().unwrap();
 
-    let addr = format!("{}:{}", host, port).parse().unwrap(); //TODO catch parse failure
+    let addr = match format!("{}:{}", host, port).parse() {
+        Ok(a) => { a },
+        //FIXME allow actual host names, not just IP addresses
+        Err(e) => { println!("Couldn't parse address {}:{} ({}).", host, port, e); process::exit(1); }
+    };
 
     let mut stream = TcpStream::connect(&addr).unwrap();
     let mut write_stream = stream.try_clone().expect("cloning failed, yikes");
