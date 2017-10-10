@@ -95,8 +95,12 @@ fn main() {
                             Err(ref e) if e.kind() == io::ErrorKind::ConnectionRefused => {
                                 println!("connect to {} port {} (tcp) failed: Connection refused", host, port);
                                 process::exit(1);
-                            }
-                            e => panic!("err={:?}", e), // Unexpected error, e.g., connection refused
+                            },
+                            Err(ref e)if e.raw_os_error().unwrap() == 113 => {
+                                println!("connect to {} port {} (tcp) failed: No route to host", host, port);
+                                process::exit(1);
+                            },
+                            e => panic!("err={:?}, ", e), // Other, unexpected error
                         }
                     }
                 },
