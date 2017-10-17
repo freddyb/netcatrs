@@ -4,6 +4,7 @@ use std::io::Write;
 use std::io::Read;
 use std::io::BufRead;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::ToSocketAddrs;
 use std::process;
 use std::thread;
 extern crate getopts;
@@ -17,6 +18,20 @@ fn print_usage(program: &str, opts: Options) {
     let brief = format!("Usage: {} [-46Chv] [destination] [port]", program);
     print!("{}", opts.usage(&brief));
 }
+
+fn resolv_host(host: &str, port: u16, v6: bool) -> Option<SocketAddr> {
+    let addrlist: Vec<_> = (host, port).to_socket_addrs().expect("Unable to resolve domain")
+        .collect();
+    for addr in addrlist {
+       if addr.is_ipv4() && !v6 {
+           return Some(addr);
+       } else if addr.is_ipv6() && v6 {
+           return Some(addr);
+       }
+    }
+    return None;
+}
+
 fn main() {
     // arg parsing
     let args: Vec<_> = env::args().collect();
@@ -58,7 +73,7 @@ fn main() {
         return;
     };
     let host = matches.free[0].clone();
-    let port: u32 = match matches.free[1].parse() {
+    let port: u16 = match matches.free[1].parse() {
         Ok(p) => p,
         Err(_) => { println!("invalid port number"); process::exit(1); }
     };
@@ -72,13 +87,26 @@ fn main() {
     const SOCKREADER: Token = Token(0);
     let poll = Poll::new().unwrap();
 
-    let addr = match format!("{}:{}", host, port).parse() {
+
+    //let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);
+   /* let addr: SocketAddr = match format!("{}:{}", host, port).parse() {
         Ok(a) => { a },
         //FIXME allow actual host names, not just IP addresses
-        Err(e) => { println!("Couldn't parse address {}:{} ({}).", host, port, e); process::exit(1); }
-    };
+        Err(e) => { println!("Couldn't parse address {}:{} ({}).", host, port, e);
+           // process::exit(1);
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080)
+        }
+    };*/
 
-    let mut stream = TcpStream::connect(&addr).unwrap();
+    let addr = resolv_host(host.as_str(), port, v6)
+        .expect("Can't find an address that matches the required IP family");
+
+
+    let mut stream = match TcpStream::connect(&addr) {
+        Ok(s) => { s },
+        Err(e) => { panic!(e.to_string()) }
+    };
+    // create a copy of the stream, to be used in the stdin-thread:
     let mut write_stream = stream.try_clone().expect("cloning failed, yikes");
 
     // Register the listener
